@@ -1,0 +1,50 @@
+"use server"
+
+import { NextRequest } from "next/server"
+import { cookies } from "next/headers"
+import { getIronSession, IronSession } from "iron-session"
+import { defaultSession, sessionOptions } from "@/models/session"
+import { sleep, SessionData } from "@/models/session"
+
+// runs on server
+
+// login
+export async function POST(request: NextRequest): Promise<Response> {
+  const session: IronSession<SessionData> = await getIronSession<SessionData>(cookies(), sessionOptions)
+
+  // Look up via db or server
+  const { username = "No username" } = (await request.json()) as {
+    username: string
+  }
+
+  session.isLoggedIn = true
+  session.username = username
+  await session.save()
+
+  // simulate looking up the user in db
+  await sleep(250)
+
+  return Response.json(session)
+}
+
+
+// read session
+export async function GET(): Promise<Response> {
+  const session: IronSession<SessionData> = await getIronSession<SessionData>(cookies(), sessionOptions)
+
+  if (!session.isLoggedIn) {
+    return Response.json(defaultSession)
+  }
+
+  return Response.json(session)
+}
+
+
+// logout
+export async function DELETE(): Promise<Response> {
+  const session: IronSession<SessionData> = await getIronSession<SessionData>(cookies(), sessionOptions)
+
+  session.destroy()
+
+  return Response.json(defaultSession)
+}
